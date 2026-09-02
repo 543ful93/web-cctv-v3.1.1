@@ -2458,6 +2458,7 @@ async function loadNetworkMenu() {
     renderRouterOverview(netSummaryData);
     fillNetScanIfaceOptions(netSummaryData);
     loadDhcpStatus(); // v2.9.20: status DHCP server LAN CCTV
+    loadZeroTierStatus(); // v3.1: VPN virtual langsung dari menu Network
   } catch (err) {
     if (body) body.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-red-400">${escHtml(err.message)}</td></tr>`;
   }
@@ -2497,6 +2498,147 @@ function renderRouterOverview(data) {
     if (label) label.textContent = inet.ok === true
       ? (L ? `Internet aktif${inet.ms ? " · " + inet.ms + " ms" : ""}` : `Internet online${inet.ms ? " · " + inet.ms + " ms" : ""}`)
       : (L ? "Mode lokal / internet offline" : "Local mode / internet offline");
+  }
+}
+
+// ===== v3.1: ZEROTIER LANGSUNG DARI MENU NETWORK =========================
+function setZeroTierMessage(message, type = "info") {
+  const el = document.getElementById("zerotier-message");
+  if (!el) return;
+  if (!message) { el.classList.add("hidden"); el.textContent = ""; return; }
+  const styles = {
+    info: "bg-sky-500/10 border border-sky-500/30 text-sky-200",
+    success: "bg-emerald-500/10 border border-emerald-500/30 text-emerald-200",
+    error: "bg-red-500/10 border border-red-500/30 text-red-200",
+  };
+  el.className = `rounded-lg px-3 py-2 text-[11px] ${styles[type] || styles.info}`;
+  el.textContent = message;
+}
+
+async function loadZeroTierStatus() {
+  const networksEl = document.getElementById("zerotier-networks");
+  if (!networksEl) return;
+  const setText = (id, value, cls) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = value;
+    if (cls) el.className = cls;
+  };
+  try {
+    const res = await fetch("/api/net/zerotier/status", { headers: netAuthHeaders() });
+    const data = await res.json();
+    if (!res.ok) {
+      if (res.status === 404) throw new Error("Backend ZeroTier belum aktif. Perbarui server.js/server.mysql.js lalu restart service Web-CCTV.");
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+
+    const installBox = document.getElementById("zerotier-install-box");
+    const joinBox = document.getElementById("zerotier-join-box");
+    if (installBox) installBox.classList.toggle("hidden", data.installed);
+    if (joinBox) joinBox.classList.toggle("hidden", !data.installed);
+    setText("zerotier-installed", data.installed ? "TERPASANG" : "BELUM TERPASANG", data.installed ? "text-emerald-400" : "text-amber-400");
+    setText("zerotier-online", data.installed ? (data.online ? "ONLINE" : "OFFLINE") : "—", data.online ? "text-emerald-400" : "text-slate-400");
+    setText("zerotier-node-id", data.node_id || "—", "font-mono text-slate-200");
+    setText("zerotier-version", data.version || "—", "font-mono text-slate-200");
+
+    const networks = Array.isArray(data.networks) ? data.networks : [];
+    if (!data.installed) {
+      networksEl.innerHTML = `<div class="text-[11px] text-slate-500 py-3 text-center">Pasang ZeroTier untuk mulai menghubungkan jaringan.</div>`;
+    } else if (!networks.length) {
+      networksEl.innerHTML = `<div class="text-[11px] text-slate-500 bg-slate-950/50 border border-slate-800 rounded-lg py-4 text-center">Belum bergabung ke jaringan ZeroTier.</div>`;
+    } else {
+      networksEl.innerHTML = networks.map(n => {
+        const ok = String(n.status).toUpperCase() === "OK";
+        const ips = (n.assigned_addresses || []).length
+          ? n.assigned_addresses.map(ip => `<span class="zerotier-ip">${escHtml(ip)}</span>`).join("")
+          : `<span class="text-amber-400">Menunggu otorisasi / IP…</span>`;
+        return `<div class="zerotier-network-card">
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <strong class="font-mono text-slate-100">${escHtml(n.id)}</strong>
+              <span class="zerotier-status ${ok ? "is-ok" : "is-wait"}">${escHtml(n.status || "WAITING")}</span>
+            </div>
+            <div class="text-[10px] text-slate-500 mt-1">${escHtml(n.name || "Jaringan tanpa nama")} ${n.device ? `· ${escHtml(n.device)}` : ""}</div>
+            <div class="flex flex-wrap gap-1.5 mt-2">${ips}</div>
+          </div>
+          <button type="button" onclick="leaveZeroTier('${escHtml(n.id)}')" class="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer whitespace-nowrap">
+            <i class="fa-solid fa-link-slash mr-1"></i>Keluar
+          </button>
+        </div>`;
+      }).join("");
+    }
+    if (data.last_error) setZeroTierMessage(data.last_error, "error");
+    else setZeroTierMessage("");
+  } catch (err) {
+    setZeroTierMessage(err.message, "error");
+    networksEl.innerHTML = `<div class="text-[11px] text-red-400 py-3 text-center">${escHtml(err.message)}</div>`;
+  }
+}
+
+async function installZeroTier() {
+  const btn = document.getElementById("zerotier-install-btn");
+  if (!confirm("Pasang ZeroTier resmi dan aktifkan otomatis saat STB menyala?")) return;
+  if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-1"></i>Sedang memasang…`; }
+  setZeroTierMessage("Mengunduh dan memasang ZeroTier. Proses dapat berlangsung beberapa menit…", "info");
+  try {
+    const res = await fetch("/api/net/zerotier/install", { method: "POST", headers: netAuthHeaders() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    setZeroTierMessage("ZeroTier berhasil dipasang dan service sudah aktif.", "success");
+    showToast("ZeroTier berhasil dipasang.", "success");
+    await loadZeroTierStatus();
+  } catch (err) {
+    setZeroTierMessage(err.message, "error");
+    showToast(err.message, "error");
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-download mr-1"></i>Pasang ZeroTier Otomatis`; }
+  }
+}
+
+async function joinZeroTier() {
+  const input = document.getElementById("zerotier-network-id");
+  const btn = document.getElementById("zerotier-join-btn");
+  const id = String(input ? input.value : "").trim().toLowerCase();
+  if (!/^[0-9a-f]{16}$/.test(id)) {
+    setZeroTierMessage("Network ID wajib tepat 16 karakter: angka 0–9 dan huruf a–f.", "error");
+    if (input) input.focus();
+    return;
+  }
+  if (btn) btn.disabled = true;
+  setZeroTierMessage(`Menghubungkan STB ke jaringan ${id}…`, "info");
+  try {
+    const res = await fetch("/api/net/zerotier/join", {
+      method: "POST",
+      headers: { ...netAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ network_id: id })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    if (input) input.value = "";
+    setZeroTierMessage("Permintaan bergabung berhasil. Otorisasi Node ID ini di ZeroTier Central.", "success");
+    showToast("Berhasil bergabung ke ZeroTier.", "success");
+    await loadZeroTierStatus();
+  } catch (err) {
+    setZeroTierMessage(err.message, "error");
+    showToast(err.message, "error");
+  } finally { if (btn) btn.disabled = false; }
+}
+
+async function leaveZeroTier(networkId) {
+  if (!confirm(`Keluar dari jaringan ZeroTier ${networkId}? Akses melalui IP virtual ini akan terputus.`)) return;
+  try {
+    const res = await fetch("/api/net/zerotier/leave", {
+      method: "POST",
+      headers: { ...netAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ network_id: networkId })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    showToast("Berhasil keluar dari jaringan ZeroTier.", "success");
+    await loadZeroTierStatus();
+  } catch (err) {
+    setZeroTierMessage(err.message, "error");
+    showToast(err.message, "error");
   }
 }
 

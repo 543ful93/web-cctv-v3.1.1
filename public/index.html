@@ -33,7 +33,7 @@
        sebagian lingkungan (iframe preview) dan membuat tampilan acak-acakan. -->
   <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
-  <link rel="stylesheet" href="/style.css?v=3.0.3">
+  <link rel="stylesheet" href="/style.css?v=3.1.1">
   <link rel="stylesheet" href="/vendor/tailwind.css?v=2.9.22">
 </head>
 <body class="flex flex-col h-full overflow-hidden font-sans select-none antialiased">
@@ -719,12 +719,77 @@
             </div>
 
             <nav class="router-quick-nav" aria-label="Navigasi pengaturan jaringan">
+              <a href="#network-zerotier"><i class="fa-solid fa-share-nodes"></i> ZeroTier</a>
               <a href="#network-dhcp"><i class="fa-solid fa-address-card"></i> DHCP</a>
               <a href="#network-interfaces"><i class="fa-solid fa-sitemap"></i> Antarmuka</a>
               <a href="#network-wan"><i class="fa-solid fa-earth-asia"></i> WAN</a>
               <a href="#network-lan"><i class="fa-solid fa-network-wired"></i> LAN</a>
               <a href="#network-cameras"><i class="fa-solid fa-radar"></i> Pindai Kamera</a>
             </nav>
+          </div>
+
+          <!-- ===== v3.1: ZEROTIER TANPA TERMINAL ===== -->
+          <div id="network-zerotier" class="network-panel bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6 space-y-4 shadow-lg">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div>
+                <h3 class="font-bold text-white flex items-center gap-2 text-sm md:text-base">
+                  <span class="zerotier-logo"><i class="fa-solid fa-share-nodes"></i></span>
+                  <span>ZeroTier — Akses CCTV dari Jaringan Virtual</span>
+                </h3>
+                <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                  Pasang dan hubungkan STB ke jaringan ZeroTier langsung dari dashboard. Tidak perlu SSH,
+                  terminal, port forwarding, atau IP publik.
+                </p>
+              </div>
+              <button type="button" onclick="loadZeroTierStatus()" class="self-start bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg text-xs font-semibold border border-slate-700 cursor-pointer">
+                <i class="fa-solid fa-rotate mr-1"></i>Perbarui Status
+              </button>
+            </div>
+
+            <div id="zerotier-message" class="hidden rounded-lg px-3 py-2 text-[11px]"></div>
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              <div class="zerotier-stat"><span>Status Service</span><strong id="zerotier-installed">Memeriksa…</strong></div>
+              <div class="zerotier-stat"><span>Status Node</span><strong id="zerotier-online">—</strong></div>
+              <div class="zerotier-stat"><span>Node ID</span><strong id="zerotier-node-id" class="font-mono">—</strong></div>
+              <div class="zerotier-stat"><span>Versi</span><strong id="zerotier-version" class="font-mono">—</strong></div>
+            </div>
+
+            <div id="zerotier-install-box" class="hidden bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 space-y-2">
+              <p class="text-[11px] text-amber-200">
+                ZeroTier belum terpasang. Klik tombol berikut; dashboard akan mengunduh paket resmi,
+                memasangnya, dan mengaktifkan service otomatis saat boot.
+              </p>
+              <button id="zerotier-install-btn" type="button" onclick="installZeroTier()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-xs font-bold border-0 cursor-pointer">
+                <i class="fa-solid fa-download mr-1"></i>Pasang ZeroTier Otomatis
+              </button>
+            </div>
+
+            <div id="zerotier-join-box" class="hidden bg-slate-950/60 border border-slate-800 rounded-xl p-3 space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+                <div>
+                  <label for="zerotier-network-id" class="block text-[10px] text-slate-500 uppercase font-semibold mb-1">Network ID ZeroTier</label>
+                  <input id="zerotier-network-id" type="text" inputmode="text" maxlength="16" autocomplete="off" spellcheck="false"
+                    placeholder="contoh: 8056c2e21c000001"
+                    class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 font-mono tracking-wider focus:outline-none">
+                  <p class="text-[9px] text-slate-500 mt-1">Salin Network ID 16 karakter dari my.zerotier.com atau ZeroTier Central.</p>
+                </div>
+                <button id="zerotier-join-btn" type="button" onclick="joinZeroTier()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold border-0 cursor-pointer whitespace-nowrap">
+                  <i class="fa-solid fa-link mr-1"></i>Gabung Jaringan
+                </button>
+              </div>
+              <div class="text-[10px] text-sky-300 bg-sky-500/10 border border-sky-500/20 rounded-lg px-3 py-2">
+                Setelah bergabung, buka ZeroTier Central dan centang <b>Auth</b> untuk Node ID STB ini.
+                IP virtual akan muncul otomatis di daftar jaringan di bawah.
+              </div>
+            </div>
+
+            <div>
+              <div class="text-[10px] text-slate-500 uppercase font-semibold mb-2">Jaringan yang Diikuti</div>
+              <div id="zerotier-networks" class="space-y-2">
+                <div class="text-[11px] text-slate-500 py-3 text-center">Memuat status ZeroTier…</div>
+              </div>
+            </div>
           </div>
 
           <!-- ===== v2.9.20: SKEMA IP DEFAULT & DHCP SERVER ===== -->
@@ -2599,6 +2664,6 @@
       }
     }
   </script>
-  <script src="/app.js?v=3.0.3"></script>
+  <script src="/app.js?v=3.1.1"></script>
 </body>
 </html>

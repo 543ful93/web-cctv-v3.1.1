@@ -22,6 +22,7 @@ const { createAiService } = require('./lib/ai');
 const netinfo = require('./lib/netinfo');
 const ffmpegProfiles = require('./lib/ffmpeg-profiles');
 const { createRcloneService } = require('./lib/rclone');
+const { createZeroTierService } = require('./lib/zerotier');
 // dotenv 17 mencetak banner tips ke stdout setiap start; dimatikan agar log
 // systemd/journalctl STB tetap bersih dan mudah di-grep.
 require('dotenv').config({ quiet: true });
@@ -1280,6 +1281,49 @@ app.post('/api/tunnel/start', auth('admin'), async (req, res) => {
 app.post('/api/tunnel/stop', auth('admin'), (req, res) => {
   tunnelService.stop();
   res.json({ success: true, status: tunnelService.status() });
+});
+
+// ===== v3.1: ZEROTIER LANGSUNG DARI MENU NETWORK =====
+// Service systemd Web-CCTV berjalan sebagai root pada instalasi Armbian bawaan,
+// sehingga pemasangan, join, dan leave dapat dilakukan tanpa membuka terminal.
+const zeroTierService = createZeroTierService();
+
+app.get('/api/net/zerotier/status', auth('admin'), async (req, res) => {
+  try { res.json(await zeroTierService.status()); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/net/zerotier/install', auth('admin'), async (req, res) => {
+  try {
+    const result = await zeroTierService.install();
+    logActivity('zerotier.installed', `ZeroTier dipasang dari menu Network (${result.version || 'version unknown'})`, { req });
+    res.json(result);
+  } catch (err) {
+    logActivity('zerotier.install_failed', err.message, { req, level: 'error' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/net/zerotier/join', auth('admin'), async (req, res) => {
+  const networkId = String((req.body || {}).network_id || '').trim().toLowerCase();
+  try {
+    const result = await zeroTierService.join(networkId);
+    logActivity('zerotier.joined', `Bergabung ke jaringan ${networkId}`, { req });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/net/zerotier/leave', auth('admin'), async (req, res) => {
+  const networkId = String((req.body || {}).network_id || '').trim().toLowerCase();
+  try {
+    const result = await zeroTierService.leave(networkId);
+    logActivity('zerotier.left', `Keluar dari jaringan ${networkId}`, { req, level: 'warn' });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // ===== v2.9: INFO JARINGAN (khusus admin) =====

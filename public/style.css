@@ -1058,3 +1058,62 @@ body.light-mode #live-cameras-grid > [data-reorder-id] { background: #fff !impor
   .cctv-svg-marker.is-online .cctv-svg-marker-pulse,
   .cctv-hq-marker .cctv-svg-marker-pulse { animation: none; }
 }
+
+/* v3.1 — ZeroTier control panel */
+.zerotier-logo {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  color: #fff;
+  background: linear-gradient(145deg, #f59e0b, #d97706);
+  box-shadow: 0 7px 18px rgba(245,158,11,.22);
+}
+.zerotier-stat {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--ui-border);
+  border-radius: 11px;
+  background: rgba(2,6,23,.36);
+}
+.zerotier-stat span,
+.zerotier-stat strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zerotier-stat span { color: #64748b; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.zerotier-stat strong { margin-top: 4px; color: #cbd5e1; font-size: 11px; }
+.zerotier-network-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  background: rgba(2,6,23,.38);
+}
+.zerotier-status {
+  display: inline-flex;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .05em;
+}
+.zerotier-status.is-ok { color: #6ee7b7; background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.22); }
+.zerotier-status.is-wait { color: #fcd34d; background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.22); }
+.zerotier-ip {
+  display: inline-flex;
+  padding: 3px 7px;
+  border: 1px solid rgba(14,165,233,.24);
+  border-radius: 7px;
+  color: #7dd3fc;
+  background: rgba(14,165,233,.09);
+  font: 600 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+body.light-mode .zerotier-stat,
+body.light-mode .zerotier-network-card { background: #fff; }
+body.light-mode .zerotier-stat strong { color: #1e293b; }
+@media (max-width: 520px) {
+  .zerotier-network-card { align-items: flex-start; flex-direction: column; }
+}

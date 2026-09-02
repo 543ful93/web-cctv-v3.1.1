@@ -1,5 +1,20 @@
 # Changelog
 
+## v3.1.1 — ZeroTier Backend Not Found Fix
+
+- Menambahkan endpoint ZeroTier ke backend MySQL/MariaDB, bukan hanya SQLite.
+- Memperbaiki pesan `not found` menjadi petunjuk pembaruan backend yang jelas.
+- Menyamakan fitur install, status, join, dan leave pada kedua backend.
+
+## v3.1.0 — ZeroTier dari Menu Network
+
+- Menambahkan pemasangan ZeroTier otomatis langsung dari dashboard tanpa terminal/SSH.
+- Menambahkan status service, status node, Node ID, versi, jaringan, interface, dan IP virtual.
+- Mendukung gabung jaringan memakai Network ID serta keluar jaringan dengan konfirmasi.
+- Mengaktifkan `zerotier-one` otomatis saat boot melalui systemd.
+- Memvalidasi Network ID secara ketat (16 karakter heksadesimal) dan menjalankan perintah tanpa shell input pengguna.
+- Seluruh aksi dibatasi untuk admin dan dicatat di Log Aktivitas.
+
 ## v3.0.3 — INFO Bar Live Update Fix
 
 - Memperbaiki Baris INFO yang tidak berubah setelah `Teks Berjalan` disimpan.
