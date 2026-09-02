@@ -1036,8 +1036,17 @@ function updateDynamicTranslations() {
 let appConfigs = {};
 async function loadAppConfigs() {
   try {
-    const res = await fetch("/api/settings");
+    const res = await fetch("/api/settings", {
+      headers: safeStorage.getItem("token")
+        ? { "Authorization": `Bearer ${safeStorage.getItem("token")}` }
+        : {}
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     appConfigs = await res.json();
+    // paintGovIdentity() sebelumnya membaca window.appConfigs, sedangkan hasil
+    // fetch hanya disimpan ke variabel lexical `appConfigs`. Akibatnya Baris INFO
+    // terus memakai fallback dan tidak berubah setelah nilai kustom disimpan.
+    window.appConfigs = appConfigs;
     
     // Apply Settings to UI
     const setInner = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
@@ -5423,8 +5432,10 @@ async function handleSaveAppSettings(e) {
     });
     if (!res.ok) throw new Error("Gagal menyimpan setting");
 
-    showToast(currentLanguage === 'id' ? "Pengaturan Aplikasi berhasil diperbarui!" : "App settings updated successfully!", "success");
-    loadAppConfigs(); // Reload config titles
+    // Tunggu konfigurasi terbaru selesai dimuat dan dicat ke kop. Tanpa await,
+    // pengguna dapat melihat toast berhasil sementara Baris INFO masih teks lama.
+    await loadAppConfigs();
+    showToast(currentLanguage === 'id' ? "Pengaturan aplikasi dan Baris INFO berhasil diperbarui!" : "App settings and INFO bar updated successfully!", "success");
   } catch (err) {
     showToast(err.message, "error");
   }

@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.0.3 — INFO Bar Live Update Fix
+
+- Memperbaiki Baris INFO yang tidak berubah setelah `Teks Berjalan` disimpan.
+- Menyamakan state konfigurasi hasil API dengan state yang dibaca renderer kop instansi.
+- Menunggu proses muat ulang konfigurasi selesai sebelum menampilkan notifikasi berhasil.
+- Mengirim token login saat memuat pengaturan agar konfigurasi admin lengkap dan konsisten.
+
 ## v3.0.2 — Unmistakable CCTV SVG Marker
 
 - Mengganti ikon berbasis font dengan SVG kamera CCTV mandiri agar bentuk kamera selalu tampil.
